@@ -36,4 +36,3 @@ class CalculateLineDirection:
             #Arriba hacia Abajo
             elif self._y1 > self._y2: #y _y1 mayor a _y2
                 return 8
-        

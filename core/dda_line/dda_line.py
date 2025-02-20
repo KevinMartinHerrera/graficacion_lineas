@@ -1,4 +1,4 @@
-class LineaDDA:
+class DDALinea:
     def __init__(self, A, B, slope, direction):
         self._slope = slope
         self._direction = direction
@@ -145,4 +145,3 @@ class LineaDDA:
             print("Solo Arriba a Abajo o viceverza")
             points = self.__slope_equal_none()
             return points
-        

@@ -2,9 +2,9 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
-from calculate_line_direction import CalculateLineDirection
-from calculate_slope import CalculateSlope
-from dda_line_class import LineaDDA
+from core.calculate_line_direction.calculate_line_direction import CalculateLineDirection
+from core.calculate_slope.calculate_slope import CalculateSlope
+from core.dda_line.dda_line import DDALinea
 import csv
 
 class UltimateLineVisualizer:
@@ -141,7 +141,7 @@ class UltimateLineVisualizer:
             A, B = (x1, y1), (x2, y2)
             direction = CalculateLineDirection(A, B).line_direction()
             slope = CalculateSlope(A, B).slope()
-            line = LineaDDA(A, B, slope, direction)
+            line = DDALinea(A, B, slope, direction)
             points = line.calculate_line()
 
             self.ax.clear()
@@ -194,8 +194,3 @@ class UltimateLineVisualizer:
             messagebox.showinfo("Éxito", f"Archivo guardado en:\n{file_path}")
         except Exception as e:
             messagebox.showerror("Error", f"Error al exportar:\n{str(e)}")
-
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = UltimateLineVisualizer(root)
-    root.mainloop()
