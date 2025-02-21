@@ -14,4 +14,3 @@ class CalculateSlope:
             return None
         _slope = round(dy / dx, 4)
         return _slope
-        
