@@ -10,4 +10,11 @@ class LineService:
         direction = CalculateLineDirection(self.line.point_a, self.line.point_b).line_direction()
         slope = CalculateSlope(self.line.point_a, self.line.point_b).slope()
         points = DDALinea(self.line.point_a, self.line.point_b, slope, direction).calculate_line()
-        return direction, slope, points
+        
+        line_properties = {
+                "direccion": direction,
+                "pendiente": slope,
+                "coordenadas": points
+            }
+        
+        return line_properties
