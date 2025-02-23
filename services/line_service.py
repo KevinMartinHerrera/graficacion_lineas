@@ -16,5 +16,4 @@ class LineService:
                 "pendiente": slope,
                 "coordenadas": points
             }
-        
         return line_properties

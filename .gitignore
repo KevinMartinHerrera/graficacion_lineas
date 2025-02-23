@@ -4,4 +4,3 @@ prueba.py
 user_interface/*r.py
 core/calculate_triangle
 services/triangle_service.py
-models/triangle_model.py
