@@ -7,6 +7,9 @@ from models.line_model import LineModel
 class Triangle ():
     def __init__(self, triangle):
         self.triangle = triangle
+        self.triangle_point_ab = []
+        self.triangle_point_bc = []
+        self.triangle_point_ca = []
         
     def __calculate_line(self, point_one, point_two):
         line_model = LineModel(point_one, point_two)
@@ -22,5 +25,12 @@ class Triangle ():
         return direction
         
     def calculate_triangle(self):
-        triangle = self.__calculate_line(self.triangle.point_a, self.triangle.point_b)
+        self.triangle_point_ab = self.__calculate_line(self.triangle.point_a, self.triangle.point_b)
+        self.triangle_point_bc = self.__calculate_line(self.triangle.point_b, self.triangle.point_c)
+        self.triangle_point_ca = self.__calculate_line(self.triangle.point_c, self.triangle.point_a)
+        
+        triangle = [self.triangle_point_ab, self.triangle_point_bc, self.triangle_point_ca]
         return triangle
+    
+    def calculate_triangle_fill(self):
+        pass
