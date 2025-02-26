@@ -122,26 +122,26 @@ class DDALinea:
     
     def calculate_line(self):
         if self._direction == 1 and self._slope > 0: #Izquierda a Derecha, Abajo a Arriba con pendiente positiva o negativa
-            print("Izquierda a Derecha, Abajo a Arriba")
+            #print("Izquierda a Derecha, Abajo a Arriba")
             points = self.__calculate_line_left_right_down_up()
             return points
         if self._direction == 2 and self._slope < 0: #Izquierda a Derecha, Arriba a ABajo
-            print("Izquierda a Derecha, Arriba a Abajo")
+            #print("Izquierda a Derecha, Arriba a Abajo")
             points = self.__calculate_negative_line_left_right_up_down()
             return points
         if self._direction == 4 and self._slope < 0:
-            print("Derecha a Izquierda, Abajo a Arriba")
+            #print("Derecha a Izquierda, Abajo a Arriba")
             points = self.__calculate_negative_line_right_left_down_up()
             return points
         elif self._direction == 5 and self._slope > 0:#Derecha a Izquierda, Arriba a Abajo
-            print("Derecha a Izquierda, Arriba a Abajo")
+            #print("Derecha a Izquierda, Arriba a Abajo")
             points = self.__calculate_line_right_left_up_down()
             return points
         elif self._direction == 3 or self._direction == 6:
-            print("Solo Derecha a Izquierda o viceverza")
+            #print("Solo Derecha a Izquierda o viceverza")
             points = self.__slope_equal_zero()
             return points
         elif self._direction == 7 or self._direction == 8:
-            print("Solo Arriba a Abajo o viceverza")
+            #print("Solo Arriba a Abajo o viceverza")
             points = self.__slope_equal_none()
             return points
