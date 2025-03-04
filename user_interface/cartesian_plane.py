@@ -1,11 +1,14 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import matplotlib.pyplot as plt
+from matplotlib.collections import LineCollection
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from core.calculate_line_direction.calculate_line_direction import CalculateLineDirection
 from core.calculate_slope.calculate_slope import CalculateSlope
 from core.dda_line.dda_line import DDALinea
 import csv
+from models.triangle_model import TriangleModel
+from core.calculate_triangle.triangle import Triangle
 
 class UltimateLineVisualizer:
     def __init__(self, root):
@@ -13,6 +16,7 @@ class UltimateLineVisualizer:
         self.root.title("Ultimate Line Visualizer Pro")
         self.root.geometry("1300x850")
         self.dark_mode = False
+        self.triangle_mode = False
         self.setup_styles()
         self.setup_ui()
         
@@ -56,10 +60,22 @@ class UltimateLineVisualizer:
         self.y2_entry = ttk.Entry(input_frame, width=10)
         self.y2_entry.grid(row=1, column=2, padx=5)
 
+        # Campos para triángulo (ocultos inicialmente)
+        self.x3_label = ttk.Label(input_frame, text="Punto C (X3, Y3):", style="Header.TLabel")
+        self.x3_label.grid(row=2, column=0, padx=5, pady=5, sticky="w")
+        self.x3_entry = ttk.Entry(input_frame, width=10)
+        self.x3_entry.grid(row=2, column=1, padx=5)
+        self.y3_entry = ttk.Entry(input_frame, width=10)
+        self.y3_entry.grid(row=2, column=2, padx=5)
+        self.x3_label.grid_remove()
+        self.x3_entry.grid_remove()
+        self.y3_entry.grid_remove()
+
         # Botones
         btn_frame = ttk.Frame(input_frame)
-        btn_frame.grid(row=2, column=0, columnspan=3, pady=10)
-        ttk.Button(btn_frame, text="🖌️ Generar", command=self.draw_line).pack(side=tk.LEFT, padx=2)
+        btn_frame.grid(row=3, column=0, columnspan=3, pady=10)
+        ttk.Button(btn_frame, text="🖌️ Generar", command=self.draw_geometry).pack(side=tk.LEFT, padx=2)
+        ttk.Button(btn_frame, text="🔺 Triángulo", command=self.toggle_triangle_mode).pack(side=tk.LEFT, padx=2)
         ttk.Button(btn_frame, text="🧹 Limpiar", command=self.clear_all).pack(side=tk.LEFT, padx=2)
         ttk.Button(btn_frame, text="💾 CSV", command=self.export_csv).pack(side=tk.LEFT, padx=2)
         ttk.Button(btn_frame, text="🌓 Tema", command=self.toggle_theme).pack(side=tk.LEFT, padx=2)
@@ -113,11 +129,21 @@ class UltimateLineVisualizer:
         self.setup_plot_style()
         self.canvas.draw()
 
+    def toggle_triangle_mode(self):
+        self.triangle_mode = not self.triangle_mode
+        if self.triangle_mode:
+            self.x3_label.grid()
+            self.x3_entry.grid()
+            self.y3_entry.grid()
+        else:
+            self.x3_label.grid_remove()
+            self.x3_entry.grid_remove()
+            self.y3_entry.grid_remove()
+        self.clear_all()
+
     def clear_all(self):
-        self.x1_entry.delete(0, tk.END)
-        self.y1_entry.delete(0, tk.END)
-        self.x2_entry.delete(0, tk.END)
-        self.y2_entry.delete(0, tk.END)
+        for entry in [self.x1_entry, self.y1_entry, self.x2_entry, self.y2_entry, self.x3_entry, self.y3_entry]:
+            entry.delete(0, tk.END)
         self.ax.clear()
         self.setup_plot_style()
         self.canvas.draw()
@@ -125,6 +151,12 @@ class UltimateLineVisualizer:
         self.direction_label.config(text="")
         self.slope_label.config(text="")
         self.points_label.config(text="")
+
+    def draw_geometry(self):
+        if self.triangle_mode:
+            self.draw_triangle()
+        else:
+            self.draw_line()
 
     def draw_line(self):
         try:
@@ -176,6 +208,72 @@ class UltimateLineVisualizer:
             messagebox.showerror("Error", str(ve))
         except Exception as e:
             messagebox.showerror("Error", f"Error inesperado:\n{str(e)}")
+
+    def draw_triangle(self):
+        try:
+            A = (float(self.x1_entry.get()), float(self.y1_entry.get()))
+            B = (float(self.x2_entry.get()), float(self.y2_entry.get()))
+            C = (float(self.x3_entry.get()), float(self.y3_entry.get()))
+            
+            # Validar colinealidad
+            area = abs((B[0]*(C[1]-A[1]) + C[0]*(A[1]-B[1]) + A[0]*(B[1]-C[1]))) / 2
+            if area < 1:
+                raise ValueError("¡Los puntos deben formar un triángulo válido!")
+            
+            triangle_model = TriangleModel(A, B, C)
+            triangle = Triangle(triangle_model)
+            filled_data = triangle.calculate_triangle_fill()
+
+            self.ax.clear()
+            self.setup_plot_style()
+            line_color = "#ff7675" if self.dark_mode else "#d63031"
+            fill_color = "#ff767540" if self.dark_mode else "#74b9ff40"
+
+            # Dibujar bordes
+            self.ax.plot([A[0], B[0]], [A[1], B[1]], color=line_color, linewidth=3)
+            self.ax.plot([B[0], C[0]], [B[1], C[1]], color=line_color, linewidth=3)
+            self.ax.plot([C[0], A[0]], [C[1], A[1]], color=line_color, linewidth=3)
+
+            # Relleno optimizado
+            segments = []
+            for fill_line in filled_data["AC"]:
+                points = fill_line["coordenadas"]
+                if len(points) >= 2:
+                    segments.append([(points[0][0], points[0][1]), (points[-1][0], points[-1][1])])
+            
+            lc = LineCollection(segments, colors=fill_color, linewidths=1)
+            self.ax.add_collection(lc)
+            
+            self._update_triangle_ui(filled_data, area)
+            self.canvas.draw()
+
+        except ValueError as ve:
+            messagebox.showerror("Error", str(ve))
+        except Exception as e:
+            messagebox.showerror("Error", f"Error en triángulo:\n{str(e)}")
+
+    def _update_triangle_ui(self, filled_data, area):
+        all_points = set()
+        
+        # Procesar bordes
+        for edge in [filled_data["AB"], filled_data["BC"]]:
+            for p in edge["coordenadas"]:
+                all_points.add((round(p[0], 2), round(p[1], 2)))
+        
+        # Procesar relleno
+        for fill_line in filled_data["AC"]:
+            for p in fill_line["coordenadas"]:
+                all_points.add((round(p[0], 2), round(p[1], 2)))
+
+        # Actualizar tabla
+        self.table.delete(*self.table.get_children())
+        for p in sorted(all_points, key=lambda x: (x[0], x[1])):
+            self.table.insert("", "end", values=p)
+
+        # Actualizar labels
+        self.direction_label.config(text="Triángulo Rellenado")
+        self.slope_label.config(text=f"Área: {area:.2f} px²")
+        self.points_label.config(text=f"Total Puntos: {len(all_points)}")
 
     def export_csv(self):
         try:

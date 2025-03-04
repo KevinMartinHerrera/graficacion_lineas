@@ -52,16 +52,28 @@ class Triangle ():
         return coordinates_tuple
     
     def calculate_triangle_fill(self):
-        triangle = self.calculate_triangle()
-        triangle_fill = []
-        self.triangle_point_ab = self.__calculate_line(self.triangle.point_a, self.triangle.point_b)
-        self.triangle_point_bc = self.__calculate_line(self.triangle.point_b, self.triangle.point_c)
+        # Cálculo de bordes
+        self.ab_points = self._calculate_edge(self.triangle.point_a, self.triangle.point_b)
+        self.bc_points = self._calculate_edge(self.triangle.point_b, self.triangle.point_c)
         
-        for point in self.triangle_point_bc["coordenadas"][1:-1]:
-            triangle_fill.append(self.__calculate_line(self.triangle.point_a, point))
-        triangle_points = {
-            "AB" : self.triangle_point_ab,
-            "BC" : self.triangle_point_bc,
-            "AC" : triangle_fill
+        # Relleno
+        fill_lines = []
+        for point in self.bc_points["coordenadas"][1:-1]:
+            fill_line = self._calculate_edge(self.triangle.point_a, point)
+            fill_lines.append(fill_line)
+        
+        return {
+            "AB": self.ab_points,
+            "BC": self.bc_points,
+            "AC": fill_lines
         }
-        return triangle_points
+    def _calculate_edge(self, start, end):
+        direction = CalculateLineDirection(start, end).line_direction()
+        slope = CalculateSlope(start, end).slope()
+        points = DDALinea(start, end, slope, direction).calculate_line()
+        
+        return {
+            "direccion": direction,
+            "pendiente": slope,
+            "coordenadas": points
+        }
