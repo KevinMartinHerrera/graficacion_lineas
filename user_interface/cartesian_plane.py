@@ -60,7 +60,7 @@ class UltimateLineVisualizer:
         self.y2_entry = ttk.Entry(input_frame, width=10)
         self.y2_entry.grid(row=1, column=2, padx=5)
 
-        # Campos para triángulo (ocultos inicialmente)
+        # Campos para triángulo
         self.x3_label = ttk.Label(input_frame, text="Punto C (X3, Y3):", style="Header.TLabel")
         self.x3_label.grid(row=2, column=0, padx=5, pady=5, sticky="w")
         self.x3_entry = ttk.Entry(input_frame, width=10)
@@ -91,13 +91,33 @@ class UltimateLineVisualizer:
         self.points_label = ttk.Label(data_frame, style="Data.TLabel")
         self.points_label.pack(fill=tk.X, pady=3)
 
-        # Tabla
-        table_frame = ttk.LabelFrame(left_frame, text="📑 Puntos Generados", padding=15)
-        table_frame.pack(fill=tk.BOTH, expand=True)
-        self.table = ttk.Treeview(table_frame, columns=("X", "Y"), show="headings", height=12)
-        self.table.heading("X", text="X")
-        self.table.heading("Y", text="Y")
-        self.table.pack(fill=tk.BOTH, expand=True)
+        # Notebook para las tablas
+        table_notebook = ttk.Notebook(left_frame)
+        table_notebook.pack(fill=tk.BOTH, expand=True, pady=10)
+
+        # Tabla AB
+        tab_ab = ttk.Frame(table_notebook)
+        self.table_ab = ttk.Treeview(tab_ab, columns=("X", "Y"), show="headings", height=6)
+        self.table_ab.heading("X", text="X")
+        self.table_ab.heading("Y", text="Y")
+        self.table_ab.pack(fill=tk.BOTH, expand=True)
+        table_notebook.add(tab_ab, text="AB")
+
+        # Tabla BC
+        tab_bc = ttk.Frame(table_notebook)
+        self.table_bc = ttk.Treeview(tab_bc, columns=("X", "Y"), show="headings", height=6)
+        self.table_bc.heading("X", text="X")
+        self.table_bc.heading("Y", text="Y")
+        self.table_bc.pack(fill=tk.BOTH, expand=True)
+        table_notebook.add(tab_bc, text="BC")
+
+        # Tabla AC
+        tab_ac = ttk.Frame(table_notebook)
+        self.table_ac = ttk.Treeview(tab_ac, columns=("X", "Y"), show="headings", height=6)
+        self.table_ac.heading("X", text="X")
+        self.table_ac.heading("Y", text="Y")
+        self.table_ac.pack(fill=tk.BOTH, expand=True)
+        table_notebook.add(tab_ac, text="AC")
 
         # Gráfica
         fig = plt.figure(figsize=(8, 6), facecolor="#2d3436" if self.dark_mode else "#f5f6fa")
@@ -147,7 +167,8 @@ class UltimateLineVisualizer:
         self.ax.clear()
         self.setup_plot_style()
         self.canvas.draw()
-        self.table.delete(*self.table.get_children())
+        for table in [self.table_ab, self.table_bc, self.table_ac]:
+            table.delete(*table.get_children())
         self.direction_label.config(text="")
         self.slope_label.config(text="")
         self.points_label.config(text="")
@@ -200,9 +221,9 @@ class UltimateLineVisualizer:
             self.slope_label.config(text=f"Pendiente: {slope if slope is not None else 'Infinita'}")
             self.points_label.config(text=f"Puntos Generados: {len(points)}")
             
-            self.table.delete(*self.table.get_children())
+            self.table_ab.delete(*self.table_ab.get_children())
             for p in points:
-                self.table.insert("", "end", values=(round(p[0], 2), round(p[1], 2)))
+                self.table_ab.insert("", "end", values=(round(p[0], 2), round(p[1], 2)))
 
         except ValueError as ve:
             messagebox.showerror("Error", str(ve))
@@ -220,6 +241,11 @@ class UltimateLineVisualizer:
             if area < 1:
                 raise ValueError("¡Los puntos deben formar un triángulo válido!")
             
+            # Calcular pendientes para cada lado
+            slope_ab = CalculateSlope(A, B).slope()
+            slope_bc = CalculateSlope(B, C).slope()
+            slope_ac = CalculateSlope(A, C).slope()
+
             triangle_model = TriangleModel(A, B, C)
             triangle = Triangle(triangle_model)
             filled_data = triangle.calculate_triangle_fill()
@@ -229,10 +255,10 @@ class UltimateLineVisualizer:
             line_color = "#ff7675" if self.dark_mode else "#d63031"
             fill_color = "#ff767540" if self.dark_mode else "#74b9ff40"
 
-            # Dibujar bordes
-            self.ax.plot([A[0], B[0]], [A[1], B[1]], color=line_color, linewidth=3)
-            self.ax.plot([B[0], C[0]], [B[1], C[1]], color=line_color, linewidth=3)
-            self.ax.plot([C[0], A[0]], [C[1], A[1]], color=line_color, linewidth=3)
+            # Dibujar bordes con etiquetas
+            self._draw_edge_with_label(A, B, slope_ab, line_color, "AB")
+            self._draw_edge_with_label(B, C, slope_bc, line_color, "BC")
+            self._draw_edge_with_label(C, A, slope_ac, line_color, "AC")
 
             # Relleno optimizado
             segments = []
@@ -244,7 +270,7 @@ class UltimateLineVisualizer:
             lc = LineCollection(segments, colors=fill_color, linewidths=1)
             self.ax.add_collection(lc)
             
-            self._update_triangle_ui(filled_data, area)
+            self._update_triangle_ui(filled_data, area, slope_ab, slope_bc, slope_ac)
             self.canvas.draw()
 
         except ValueError as ve:
@@ -252,29 +278,57 @@ class UltimateLineVisualizer:
         except Exception as e:
             messagebox.showerror("Error", f"Error en triángulo:\n{str(e)}")
 
-    def _update_triangle_ui(self, filled_data, area):
-        all_points = set()
+    def _draw_edge_with_label(self, start, end, slope, color, label):
+        """Dibuja una línea con su etiqueta de pendiente"""
+        midpoint = ((start[0] + end[0])/2, (start[1] + end[1])/2)
+        slope_text = f"{label}: {slope:.2f}" if slope is not None else f"{label}: Inf"
         
-        # Procesar bordes
-        for edge in [filled_data["AB"], filled_data["BC"]]:
-            for p in edge["coordenadas"]:
-                all_points.add((round(p[0], 2), round(p[1], 2)))
+        self.ax.plot([start[0], end[0]], [start[1], end[1]], color=color, linewidth=3)
+        self.ax.text(
+            midpoint[0], midpoint[1], slope_text,
+            color=color, fontsize=10, ha='center', va='center',
+            bbox=dict(facecolor='white' if not self.dark_mode else '#2d3436', 
+                      alpha=0.8, edgecolor='none')
+        )
+
+    def _update_triangle_ui(self, filled_data, area, slope_ab, slope_bc, slope_ac):
+        # Limpiar tablas
+        self.table_ab.delete(*self.table_ab.get_children())
+        self.table_bc.delete(*self.table_bc.get_children())
+        self.table_ac.delete(*self.table_ac.get_children())
+
+        # Procesar puntos para cada arista
+        def process_points(points, table):
+            unique_points = {(round(p[0], 2), round(p[1], 2)) for p in points}
+            for x, y in sorted(unique_points, key=lambda p: (p[0], p[1])):
+                table.insert("", "end", values=(x, y))
+
+        # AB
+        process_points(filled_data["AB"]["coordenadas"], self.table_ab)
+        # BC
+        process_points(filled_data["BC"]["coordenadas"], self.table_bc)
+        # AC (relleno)
+        ac_points = [p for fill_line in filled_data["AC"] for p in fill_line["coordenadas"]]
+        process_points(ac_points, self.table_ac)
+
+        # Formatear pendientes
+        def format_slope(s):
+            return f"{s:.2f}" if s is not None else "∞"
         
-        # Procesar relleno
-        for fill_line in filled_data["AC"]:
-            for p in fill_line["coordenadas"]:
-                all_points.add((round(p[0], 2), round(p[1], 2)))
+        slopes_text = (
+            f"AB: {format_slope(slope_ab)} | "
+            f"BC: {format_slope(slope_bc)} | "
+            f"AC: {format_slope(slope_ac)}"
+        )
 
-        # Actualizar tabla
-        self.table.delete(*self.table.get_children())
-        for p in sorted(all_points, key=lambda x: (x[0], x[1])):
-            self.table.insert("", "end", values=p)
-
-        # Actualizar labels
+        # Actualizar estadísticas
+        total_points = (len(self.table_ab.get_children()) + 
+                      len(self.table_bc.get_children()) + 
+                      len(self.table_ac.get_children()))
         self.direction_label.config(text="Triángulo Rellenado")
-        self.slope_label.config(text=f"Área: {area:.2f} px²")
-        self.points_label.config(text=f"Total Puntos: {len(all_points)}")
-
+        self.slope_label.config(text=f"Pendientes: {slopes_text}")
+        self.points_label.config(text=f"Área: {area:.2f} px² | Puntos: {total_points}")
+        
     def export_csv(self):
         try:
             file_path = filedialog.asksaveasfilename(
@@ -285,9 +339,15 @@ class UltimateLineVisualizer:
             
             with open(file_path, 'w', newline='') as file:
                 writer = csv.writer(file)
-                writer.writerow(["X", "Y"])
-                for child in self.table.get_children():
-                    writer.writerow(self.table.item(child)['values'])
+                writer.writerow(["Edge", "X", "Y"])
+                
+                # Exportar todas las tablas
+                for table, edge_name in [(self.table_ab, "AB"), 
+                                        (self.table_bc, "BC"), 
+                                        (self.table_ac, "AC")]:
+                    for child in table.get_children():
+                        x, y = table.item(child)['values']
+                        writer.writerow([edge_name, x, y])
             
             messagebox.showinfo("Éxito", f"Archivo guardado en:\n{file_path}")
         except Exception as e:
